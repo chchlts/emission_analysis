@@ -1,0 +1,6 @@
+"0","new_data <-  data.frame("
+"0","  Volume = c(1400,1500,800,2000),"
+"0","  Weight = c(800, 1300,1500,1000)"
+"0",")"
+"0",""
+"0","data_pred <- data.frame(Volume = data$Volume, Weight = data$Weight)"

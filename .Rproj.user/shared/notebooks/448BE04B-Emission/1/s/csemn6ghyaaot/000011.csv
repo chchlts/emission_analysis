@@ -1,0 +1,4 @@
+"0","name <- c(""No outlier"", ""all"")"
+"0","r_square <- c(summary(model_one_pred_no_outlier)$r.squared, summary(model_one_pred)$r.squared)"
+"0",""
+"0","data.frame(name,r_square)"

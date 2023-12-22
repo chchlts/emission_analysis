@@ -1,0 +1,24 @@
+"0","glimpse(emission)"
+"1","Rows: 7,385"
+"1",""
+"1","
+"
+"1","Columns: 12"
+"1",""
+"1","
+"
+"1","$ Make                             [3m[38;5;246m<fct>[39m[23m ACURA, ACURA, ACURA, ACURA, ACURA, ACURA, ACURA, ACURA, ACURA, ACURA, ACURA, ACURA, ALFA ROMEO, ASTON…
+$ Model                            [3m[38;5;246m<fct>[39m[23m ILX, ILX, ILX HYBRID, MDX 4WD, RDX AWD, RLX, TL, TL AWD, TL AWD, TSX, TSX, TSX, 4C, DB9, RAPIDE, V8 V…
+$ Vehicle.Class                    [3m[38;5;246m<fct>[39m[23m COMPACT, COMPACT, COMPACT, SUV - SMALL, SUV - SMALL, MID-SIZE, MID-SIZE, MID-SIZE, MID-SIZE, COMPACT,…
+$ Engine.Size.L.                   [3m[38;5;246m<dbl>[39m[23m 2.0, 2.4, 1.5, 3.5, 3.5, 3.5, 3.5, 3.7, 3.7, 2.4, 2.4, 3.5, 1.8, 5.9, 5.9, 4.7, 4.7, 4.7, 4.7, 5.9, 2…
+$ Cylinders                        [3m[38;5;246m<int>[39m[23m 4, 4, 4, 6, 6, 6, 6, 6, 6, 4, 4, 6, 4, 12, 12, 8, 8, 8, 8, 12, 4, 4, 4, 4, 4, 4, 4, 6, 6, 6, 6, 6, 8,…
+$ Transmission                     [3m[38;5;246m<fct>[39m[23m AS5, M6, AV7, AS6, AS6, AS6, AS6, AS6, M6, AS5, M6, AS5, AM6, A6, A6, AM7, M6, AM7, M6, A6, AV8, AS8,…
+$ Fuel.Type                        [3m[38;5;246m<fct>[39m[23m Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, Z, D, Z, D, Z, Z, D,…
+$ Fuel.Consumption.City..L.100.km. [3m[38;5;246m<dbl>[39m[23m 9.9, 11.2, 6.0, 12.7, 12.1, 11.9, 11.8, 12.8, 13.4, 10.6, 11.2, 12.1, 9.7, 18.0, 18.0, 17.4, 18.1, 17…
+$ Fuel.Consumption.Hwy..L.100.km.  [3m[38;5;246m<dbl>[39m[23m 6.7, 7.7, 5.8, 9.1, 8.7, 7.7, 8.1, 9.0, 9.5, 7.5, 8.1, 8.3, 6.9, 12.6, 12.6, 11.3, 12.2, 11.3, 12.2, …
+$ Fuel.Consumption.Comb..L.100.km. [3m[38;5;246m<dbl>[39m[23m 8.5, 9.6, 5.9, 11.1, 10.6, 10.0, 10.1, 11.1, 11.6, 9.2, 9.8, 10.4, 8.4, 15.6, 15.6, 14.7, 15.4, 14.7,…
+$ Fuel.Consumption.Comb..mpg.      [3m[38;5;246m<int>[39m[23m 33, 29, 48, 25, 27, 28, 28, 25, 24, 31, 29, 27, 34, 18, 18, 19, 18, 19, 18, 18, 32, 28, 30, 28, 28, 3…
+$ CO2.Emissions.g.km.              [3m[38;5;246m<int>[39m[23m 196, 221, 136, 255, 244, 230, 232, 255, 267, 212, 225, 239, 193, 359, 359, 338, 354, 338, 354, 359, 2…"
+"1",""
+"1","
+"

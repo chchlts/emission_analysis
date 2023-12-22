@@ -1,0 +1,4 @@
+"0","library(GGally)"
+"0",""
+"0","ggcorr(data, label= T)"
+"2","Warning: data in column(s) 'Car', 'Model' are not numeric and were ignored"

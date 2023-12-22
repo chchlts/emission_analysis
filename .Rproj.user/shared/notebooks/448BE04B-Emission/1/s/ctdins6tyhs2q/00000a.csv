@@ -1,0 +1,1 @@
+"0","plot(fitted.values(model_all), residuals(model_all))"

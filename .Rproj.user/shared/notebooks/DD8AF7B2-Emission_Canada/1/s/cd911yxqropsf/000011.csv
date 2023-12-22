@@ -1,0 +1,1 @@
+"0","plot(y = model_all$residuals, x=model_all$fitted.values)"

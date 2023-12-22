@@ -1,0 +1,4 @@
+"0","# ""SUV - SMALL"" "
+"0","# ""SUV - STANDARD"""
+"0",""
+"0","emission_suv <- emission_feature[emission_feature$Vehicle.Class == c(""SUV - STANDARD"", ""SUV - SMALL""), ]"

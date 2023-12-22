@@ -1,0 +1,2 @@
+"0","abline(model_one_pred_no_outlier$coefficients[1], model_one_pred_no_outlier$coefficients[2], col='blue')"
+"0",""

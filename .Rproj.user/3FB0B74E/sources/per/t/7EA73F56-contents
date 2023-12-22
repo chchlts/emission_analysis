@@ -1,0 +1,369 @@
+---
+title: "Emission"
+author: "Rahmafatin Izza"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+
+```{r}
+data <- read.csv('data/Emission.csv')
+view(data)
+```
+
+```{r}
+
+data <- 
+data %>% 
+  mutate_if(.predicate = is.character, .funs = as.factor) 
+```
+
+```{r}
+anyNA(data)
+```
+
+```{r}
+summary(data)
+```
+
+```{r}
+boxplot(data$Volume, horizontal = T)
+boxplot(data$Weight, horizontal = T)
+boxplot(data$CO2, horizontal = T)
+```
+
+```{r}
+data[data$CO2 > 115,]
+```
+
+```{r}
+library(GGally)
+
+ggcorr(data, label= T)
+```
+
+## Modeling
+
+### Base model
+```{r}
+model_base <- lm(formula = CO2 ~ 1, data  = data)
+summary(model_base)
+```
+
+Dari model tanpa prediktor didapatkan bahwa nilai intercept bernilai 102.028. Nilai tersebut merupakan nilai mean. Hal ini sesuai dengan konsep regresi linear. Bagaiman ameminimalkan nilai eror sehingga apabila tanpa prediktor nilai tersebut merupakan nilai mean 
+
+```{r}
+mean(data$CO2)
+```
+### Model tanpa outlier 
+
+```{r}
+data_no_outlier <- data[data$CO2 < 115, ]
+glimpse(data_no_outlier)
+```
+```{r}
+model_one_pred_no_outlier <- lm(formula = CO2 ~ Volume, data = data_no_outlier)
+summary(model_one_pred_no_outlier)
+```
+
+
+### Model dengan satu prediktor 
+
+```{r}
+model_one_pred <- lm(formula = CO2 ~ Volume, data = data)
+summary(model_one_pred)
+```
+```{r}
+plot(data$Volume, data$CO2)
+abline(model_one_pred$coefficients[1], model_one_pred$coefficients[2], col='red')
+abline(model_one_pred_no_outlier$coefficients[1], model_one_pred_no_outlier$coefficients[2], col='blue')
+
+```
+
+```{r}
+name <- c("No outlier", "all")
+r_square <- c(summary(model_one_pred_no_outlier)$r.squared, summary(model_one_pred)$r.squared)
+
+data.frame(name,r_square)
+```
+
+Dari nilai r_square dapat dilihat bahwa nilai outlier / leverage memiliki influence yang tinggi. Dimana nilai yang terdapat outlier justru memiliki nilai r_square yang tinggi. Hal ini berarti kita mempertahankan outlier lebih baik. 
+
+Lalu bagaimana jika kita menggunakan keseluruhan variabel sebagai prediktor 
+
+### Model All Predictor
+```{r}
+model_all <- lm(formula = CO2 ~ Volume + Weight, data = data)
+summary(model_all)
+```
+Dari model all didapatkan persamaan CO2  = 79.694719 + 0.007805 * Volume +  0.007551 * Weight
+
+Dapat dilihat bahwa model dengan prediktor Volume dan Weight memiliki nilai signifikansi yang besar. sehinggar tidak menjelaskan target variabel dengan baik. Tetapi kita masih hanya menggunakan variabel numerik saja. Lalu apakah variabel kategorik juga bisa dimasukkan ke dalam model regresi linear ? 
+Bisa. 
+
+Variabel kategorik akan dilakukan perubahan menjadi dummy variabel / di encode. 
+
+```{r}
+model_all_cat <- lm(formula = CO2 ~ . -Model, data = data)
+summary(model_all_cat)
+```
+Dapat dilihat bahwa nilai adjusted r-square menurun sedangkan nilai r-square naik. 
+
+
+### Multiple R-squared vs Adj. R-Squared 
+Interpretasi model multiple linear regression dan simple linear regression kurang lebih sama. Hal yang membedakan adalah nilai r-square : 
+
+Multiple r-square : digunakan apabila kita membangun model dengan satu prediktor 
+ADjusted R-square : digunakan apabila kita membangun model menggunakan >1 prediktor 
+
+Mengapa ? 
+Secara umum, semakin banyak variabel prediktor maka akan meningkatkan nilai r-square. Menagapa demikian ? 
+Hal ini karena variabel prediktor semakin menjelaskan variabel target. Tetapi, pada kenyataannya belum tentu variabel prediktor yang digunakan memiliki pengaruh yang signifikan. 
+
+Maka dari itu untuk menghindari bias, kita menggunakan Adj r-square. 
+
+nilai adj r-square hanya meningkat apabila variabel prediktor yang digunakan memiliki pengaruh yang signifikan. terhadap target. 
+
+Bandingkan seluruh nilai r-square dan adj r-square pada seluruh model yang kita buat 
+
+```{r}
+r_square <- c(
+summary(model_base)$r.square,
+summary(model_one_pred)$r.square,
+summary(model_one_pred_no_outlier)$r.square,
+summary(model_all)$r.square,
+summary(model_all_cat)$r.square
+)
+
+adj_r.square <-  c(
+summary(model_base)$adj.r.square,
+summary(model_one_pred)$adj.r.square,
+summary(model_one_pred_no_outlier)$adj.r.square,
+summary(model_all)$adj.r.square,
+summary(model_all_cat)$adj.r.square
+)
+
+model_name <- c(
+  "model base",
+  "model one pred",
+  "model one pred no outlier",
+  "model all",
+  "model all cat"
+)
+
+data.frame(model_name, r_square, adj_r.square)
+```
+
+Dapat dilihat bahwa dari keseluruhan perhitungan bahwa model yang memiliki variabel prediktor lebih banyak cenderung memiliki nilai r-square yang tinggi. Tetapi nilai adj.rsquarenya justru berkurang. Hal ini menunjukkan bahwa penambahan variabel kategorik pada model all cat justru tidak menjelaskan variabel target dengan baik. 
+
+Tetapi jika di amati pada model one pred dan model all, dimana model all adalah model yang menggunakan prediktor berupa variabel numerik yang berkorelasi tinggi. Nilai r-square dan adj r-square meningkat meskipun tidak signifikan. Hal ini bisa menjadi indikasi bahwa variabel yang dipilih juga memberikan pengaruh terhadap model kita. 
+
+Selanjutnya mari kita menggunakan **model_all** untuk melakukan prediksi pada data baru 
+
+### Prediksi data baru
+
+Untuk melakukan prediksi kita perlu menamai prediksi dengan nama variabel yang dikenali oleh model. Dan harus berupa data.frame. Sehingga kita membuat data.frame baru yang berisi data yang akan di prediksi. 
+
+
+```{r}
+new_data <-  data.frame(
+  Volume = c(1400,1500,800,2000),
+  Weight = c(800, 1300,1500,1000)
+)
+
+
+```
+
+```{r}
+predict(object = model_all, newdata = new_data)
+```
+
+```{r}
+
+data_pred <- data.frame(Volume = data$Volume, Weight = data$Weight)
+
+prediction <- data.frame(act = data$CO2)
+prediction$model_all <- predict(object = model_all, newdata = data_pred)
+head(prediction)
+```
+
+
+```{r}
+predict.lm(object = model_all, newdata = new_data, interval = "confidence" ,level=0.95)
+```
+
+
+### Evaluating Regression Model. 
+
+Pada tahap sebelumnya kita telah membuat beberapa model dengan beberapa prediktor yang digunakan. Sehingga kita perlu mengevaluasi performa model, untuk mendapatkan model dengan nilai total eror terkecil. 
+
+Eror dalam model regresi di notasikan sebagai selisih dari nilai yang di prediksi dengan nilai aktual nya. Atau sering juga disebut dengan residu. 
+
+$$ Eror / Residual = \hat{y} - y $$
+
+Terdapat beberapa metrics yang digunakan untuk mengevaluasi performa model regresi : 
+```{r}
+library(MLmetrics)
+```
+
+
+#### Root Mean Squared Error : 
+
+Kita akan mengevaluasi nilai RMSE dari model_all. Model yang memiliki nilai r-square paling tinggi/
+
+
+```{r}
+summary(model_all)
+```
+```{r}
+
+data_pred <- data.frame(data$CO2)
+data_pred$model_all <- predict(object = model_all, data)
+
+head(data_pred)
+
+```
+
+
+
+```{r}
+RMSE(data_pred$data.CO2, data_pred$model_all)
+```
+```{r}
+range(data$CO2)
+```
+
+Dapat dilihat bahwa nilai RMSE dari model_all memiliki nilai yang cukup rendah jika dibandingkan dengan nilai range nya. Hal ini menunjukkan model sudah memiliki performa yang cukup baik untuk memprediksi data baru. 
+
+```{r}
+plot(fitted.values(model_all), residuals(model_all))
+abline(h=0, col="red")
+```
+
+
+#### Asumsi Linear Regresi
+
+Sebagai salah satu model statistika, regresi linear merupakan model yang memiliki banyak asumsi. 
+
+
+1. Linearity 
+2. Normality 
+3. Homoscedacity
+4. Multicolinearity
+
+**1. Linearity **
+
+Linearity adalah kondisi saat target variabel memiliki hubungan yang linear dengan variabel prediktornya. HUbungan linear ini biasa digambarkan dengan garis lurus.
+
+Untuk melihat asumsi linearity kita bisa menggunakan scatter plot dari variabel target dan masing- masing prediktor. Tetapi, sangat membuang waktu apabila kita melihat hal tersebut. Maka kita bisa melihat linearity model kita dengan membuat plot **residual vs fitted values** 
+
+The residuals "bounce randomly" around the 0 line. This suggests that the assumption that the relationship is linear is reasonable -> karena model sudah menangkap seluruh pola linear dari prediktor dan target, sehingga hanya tersisa eror random saja. 
+
+The residuals roughly form a "horizontal band" around the 0 line. This suggests that the variances of the error terms are equal.
+No one residual "stands out" from the basic random pattern of residuals. This suggests that there are no outliers.
+
+Any data point that falls directly on the estimated regression line has a residual of 0. Therefore, the residual = 0 line corresponds to the estimated regression line.
+
+```{r}
+plot(model_all$fitted.values, model_all$residuals)
+abline(h=0, col="red")
+```
+
+Bagaimana jika asumsi linearity tidak terpenuhi ? 
+1. Gunakan model lain yang lebih kompleks, sehingga bisa menangkap hubungan non-linear
+
+
+**2. Normality**
+
+Konsep asumsi normality dalam regresi linear adalah kondisi model regresi linear memiliki **Eror berdistribusi normal** karena kita menginginkan nilai residual yang mendekati nol (Karena residual merupakan selisih dari nilai yang diprediksi dengan nilai aktual) . 
+
+```{r}
+hist(model_all$residuals)
+```
+
+
+Uji Asumsi Normality ini dilakukan menggunakan Shapiro-Wilk hypothesis test : 
+H0 : Eror tidak berdistribusi normal
+H1 : Eror terdistribusi normal. 
+
+```{r}
+shapiro.test(model_all$residuals)
+```
+dari uji shapiro-wilk didapatkan nilai p-value : 0.1803 
+
+dengan menggunakan alpha 0.05 maka p-value > alpha 
+Kesimpulan :**Gagal Tolak HO**. Uji Asumsi Normality sudah terpenuhi menurut shapiro-wilk test. 
+
+Bagaimana jika model tidak memenuhi asumsi normality : 
+- Gunakan model lain yang tidak memerlukan asumsi 
+- 
+- 
+
+
+
+**3. Homoscedasticity**
+What Does Heteroskedasticity Mean?
+Heteroskedasticity in statistics is the error variance. This is the dependence of scattering that occurs within a sample with a minimum of one independent variable. This means that the standard deviation of a predictable variable is non-constant.
+
+How Can You Tell If a Regression Is Homoskedastic?
+You can tell if a regression is homoskedastic by looking at the ratio between the largest variance and the smallest variance. If the ratio is 1.5 or smaller, then the regression is homoskedastic.
+
+Why Is Homoskedasticity Important?
+Homoskedasticity is important because it identifies dissimilarities in a population. Any variance in a population or sample that is not even will produce results that are skewed or biased, making the analysis incorrect or worthless.
+
+
+*Uji statistik dengan `bptest()` dari package `lmtest`
+
+Breusch-Pagan hypothesis test:
+
+* H0: error menyebar konstan atau homoscedasticity
+* H1: error menyebar TIDAK konstan atau heteroscedasticity
+
+Kondisi yang diinginkan H0 
+
+```{r}
+library(lmtest)
+bptest(model_all)
+```
+
+**Kesimpulan**: p-value > alpha (0.05) artinya **gagal tolak H0** -> error menyebar konstan 
+
+
+**4. Multicolinearity**
+
+```{r}
+library(car)
+vif(model_all)
+```
+
+Alternatif cara handle:
+
+* pilih salah satu antara `police_exp60` atau `police_exp59`
+* tidak menggunakan kedua variabel tersebut dalam model
+* kita buat prediktor baru yang merupakan rata-rata dari kedua prediktor tersebut (feature engineering)
+
+**📌 Tambahan**: Apabila model tidak memenuhi asumsi no multicollinearity:
+
+1. Membuat model kembali **menggunakan salah satu prediktor** yang terindikasi multiko 
+2. **Tidak menggunakan prediktor-prediktor** tersebut
+3. **Melakukan feature engineering** dengan membuat variabel baru yang berisi rata-rata dari kedua variabel yang terindikasi multiko
+4. Gunakan model lain yang lebih kompleks (model yang bebas asumsi)
+
+
+
+
+```{r}
+
+```
+
+
+
+
+
+
+

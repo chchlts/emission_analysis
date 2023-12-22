@@ -1,0 +1,5 @@
+"0","library(ggplot2)"
+"0",""
+"0","ggplot(data = emission_suv , aes(x=Fuel.Type))+"
+"0","  geom_bar()"
+"0",""

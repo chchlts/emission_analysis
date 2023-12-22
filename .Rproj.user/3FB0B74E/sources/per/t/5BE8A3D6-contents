@@ -1,0 +1,504 @@
+---
+title: "Explorasi Emisi pada Kendaraan Bermotor"
+author: "Rahmafatin Izza"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: flatly
+    higlight: zenburn
+    toc: yes
+    toc_float:
+      collapsed: no
+    number_sections: yes
+    df_print: paged
+---
+
+
+
+# Introduction
+
+## Background
+
+Berdasarkan laporan terbaru *World Air Quality IQAir* 2021 yang dirilis pada Maret 2022, Indonesia menduduki peringkat ke-17 sebagai negara dengan tingkat polusi udara tertinggi di dunia. Polusi udara adalah terkontaminasinya udara oleh zat berbahaya. Penyebab polusi udara salah satunya adalah emisi karbon. Dikutip dari pernyataan Menteri Lingkungan Hidup dan Kehutanan pada Rapat Terbatas Kabinet di Istana Negara, sektor transportasi merupakan penyumbang terbesar emisi karbon sebesar 96,36% atau 28.317 ton per tahun, disusul pembangkit listrik 1,76% atau 5.252 ton per tahun dan industri 1,25% mencapai 3.738 ton per tahun. 
+
+Secara umum, nilai emisi pada kendaraan bermotor dapat dihitung berdasarkan **nilai konsumsi bahan bakar** dan **jenis bahan bakar**. Tetapi pada praktiknya, konsumsi bahan bakar juga dipengaruhi oleh gaya berkendara pengguna. Apakah pengguna sering melakukan akselerasi atau pengereman mendadak.Faktor akselerasi dan pengereman mendadak juga dapat dilihat dari jenis jalanan yang dilewati. Apabila pada jalan tol(*Highway*), kecepatan cenderung konstan sehingga nilai konsumsi bahan bakar akan lebih rendah dan menyebabkan emisi karbon pada kendaraan tersebut juga rendah. 
+
+Kita akan menggunakan data emisi karbon pada beberapa jenis kendaraan bermotor. Dari data tersebut kita akan mencari informasi tentang bagaimana nilai emisi kendaraan bermotor seperti nilai emisi kendaraan berdasarkan jenis bahan bakar, apakah kecepatan berkendara dapat mempengaruhi nilai emisi karbon, bagaimana jenis transmisi pada kendaraan juga mempengaruhi nilai emisi. Di akhir kita akan melakukan analisis jenis kendaraan apa yang memiliki nilai emisi yang paling kecil. 
+
+## Data Information 
+
+Dataset yang digunakan merupakan dataset dari [Kaggle](https://www.kaggle.com/datasets/debajyotipodder/co2-emission-by-vehicles?select=CO2+Emissions_Canada.csv)
+Dataset ini merupakan dataset yang sudah di transformasi dari [dataset asli](https://open.Canada.ca/data/en/dataset/98f1a129-f628-4ce4-b24d-6f16bf24dd64#wb-auto-6.) milik pemerintah Canada. 
+
+Dataset ini menujukkan nilai emisi pada kendaraan bermotor di Canada, khususnya kendaraan roda 4 keatas, yang dikumpulkan selama 7 tahun. 
+
+# Data Preparation
+
+Library preparation 
+
+```{r, warning= FALSE, message=FALSE}
+library(rmarkdown)
+library(dplyr)
+```
+
+## Read the data 
+
+```{r,  warning= FALSE}
+emission <-  read.csv('data/CO2 Emissions_Canada.csv')
+paged_table(head(emission))
+```
+
+
+Dari data diatas dapat kita lihat bahwa data kita terdiri dari beberapa kolom, berikut deskripsi dari kolom tersebut: 
+
+- **Make**: Perusahaan pembuat kendaraan 
+- **Model**: Model kendaraan bermotor 
+- **Vehicle.Class**: kelas kendaraan
+- **Engine.Size.L**: Ukuran mesin dalam Liter
+- **Cylinders**: Banyak silinder kendaraan 
+- **Transmission**: Jenis transmisi kendaraan 
+A = automatic
+AM = automated manual
+AS = automatic with select shift
+AV = continuously variable
+M = manual
+3 - 10 = Number of gears
+
+- **Fuel.Type**: Jenis bahan bakar yang digunakan 
+X = regular gasoline
+Z = premium gasoline
+D = diesel
+E = ethanol (E85)
+N = natural gas
+
+- **Fuel.Consumption.City..L.100.km.**: Konsumsi bahan bakar tiap 100km apabila berjalan di jalanan kota
+- **Fuel.Consumption.Hwy..L.100.km.**: Konsumsi bahan bakar tiap 100km apabila berjalan di jalanan tol(highway)
+- **Fuel.Consumption.Comb..L.100.km.**: Konsumsi bahan bakar tiap 100km yang di kombinasikan untuk jalanan kota dan highway ((55% city, 45% hwy))
+- **Fuel.Consumption.Comb..mpg**:  Komsumsi bahan bakar dalam satuan miles per gram
+- **CO2.Emission.g.km.**: Emisi karbon kendaraan dalam gram untuk setiap km. 
+
+## Data Preprocessing 
+
+Berdasarkan deskripsi data tersebut, kita tidak akan menggunakan kolom `Fuel.Consumption.Comb..L.100.km`. dan `Fuel.Consumption.Comb..mpg`. Hal ini dikarenakan kolom tersebut merupakan hasil kombinasi dari dua kolom yaitu `Fuel.Consumption.City..L.100.km` dan `Fuel.Consumption.Hwy..L.100.km`. Kedua kolom yang tidak digunakan memiliki informasi yang sama hanya berbeda satuan saja. 
+
+```{r}
+emission <- emission %>% 
+  select(-c("Fuel.Consumption.Comb..L.100.km.", "Fuel.Consumption.Comb..mpg."))
+```
+
+### Duplicated
+
+Kita akan melihat data kita, apakah terdapat data yang duplikat. Kita menggunakan fungsi `duplicated()` untuk melihat apakah satu baris data merupakan duplikat. Fungsi ini akan menghasilkan nilai True apabila baris tersebut terduplikasi. Untuk menghitung banyaknya baris yang duplikat kita bisa menggunakan fungsi `sum()`
+
+```{r}
+sum(duplicated(emission))
+```
+
+Dari informasi tersebut dapat kita ketahui bahwa terdapat 1103 data yang identik. Satu baris data kita merepresentasikan satu observasi sehingga kita akan menghapus baris - baris yang identik dan hanya menyisakan satu baris observasi saja. 
+
+```{r}
+emission_clean <- emission[!duplicated(emission, fromLast = TRUE),]
+```
+
+Dari kode diatas, tanda ! berarti 'bukan'. Karena fungsi `duplicated()` mengembalikan nilai True apabila baris tersebut identik, maka kita hanya akan mengambil baris yang "bukan True" = "False". Parameter `fromLast` menunjukkan bahwa kita akan mempertahankan satu dari seluruh baris yang identik yaitu baris terakhir. Sehingga observasi tersebut masih dapat kita manfaatkan
+
+Selanjutnya kita akan coba cek apakah masih terdapat duplikasi identik dari data kita. 
+
+```{r}
+paged_table(emission_clean)
+```
+Kita sudah mengetahui bahwa data kita tidak memiliki baris yang terduplikasi identik. Selanjutnya kita akan mengecek apakah terdapat *missing value* pada data kita 
+
+### Missing Value
+
+Pengecekan *missing value* pada dataframe dapat dilakukan dengan menggunakan fungsi `is.na()`. Fungsi is.na() akan menghasilkan nilai "True" apabila kolom tersebut terdapat missing value. Kita akan menggabungkan dengan fungsi `colSums()` untuk melihat jumlah *missing value* untuk setiap kolom. 
+
+```{r}
+colSums(is.na(emission_clean))
+```
+
+Dari pengecekan *missing value*, diketahui bahwa data kita sudah tidak memiliki *missing value*.
+
+### Feature Engineering 
+
+Kita akan melihat data kita 
+```{r}
+head(emission_clean)
+```
+
+Dari deskripsi data kita yang sudah dipaparkan sebelumnya, kita bisa melakukan *feature engineering* dengan membuat kolom baru dari kolom yang sudah ada. Kolom yang akan digunakan adalah kolom `Transmission`. Pada kendaraan bermotor, jenis transmisi kendaraan dapat mempengaruhi konsumsi bahan bakar.
+
+Nilai pada kolom `Transmission` merupakan gabungan dari jenis transmisi dan jumlah gear. Merujuk kembali ke deskripsi data sebelumnya. Sebagai contoh: 
+
+- AS5 
+  - Jenis transmisi: automatic with select shift
+  - Jumlah gear: 5
+- M6 
+  - Jenis transmisi: manual 
+  - Jumlah gear: 6
+
+Dari informasi tersebut kita bisa mendapatkan informasi tambahan dengan memisahkan nilai angka dan bukan angka. 
+
+```{r}
+
+# Split the string based on the last character
+emission_clean <- emission_clean %>%
+  mutate(
+    Transmission.Type = gsub("[0-9]", "", Transmission), # Remove all numbers
+    Gear = ifelse(grepl("\\d", Transmission), gsub("[^0-9]", "", Transmission), 0) # Get only number if they exist, else 0
+  )
+```
+
+Dari code tersebut kita menggunakan fungsi `mutate()` untuk membuat kolom baru. Fungsi `gsub()` digunakan untuk mengubah sebuah string berdasarkan sebuah pola yang diberikan. Pola yang diberikan adalah [0-9] yang merupakan *regular expression* untuk mencocokkan karakter yang merupakan angka dan [^0-9] merupakan kebalikannya. Sehingga dari fungsi `gsub("[0-9]", "", Transmission)` kita menghilangkan seluruh karakter angka dalam kolom Transmission dan dari fungsi `gsub("[^0-9]", "", Transmission)` kita hanya akan mendapatkan karakter angka dari kolom Transmission. 
+
+Pada kolom `Gear` kita mengkombinasikan beberapa fungsi. Fungsi `grepl()` digunakan untuk melakukan pengecekan apakah dalam satu string terdapat sebuah pola atau tidak. `\\d` menunjukkan regular expression untuk mencari digit angka. Singkatnya fungsi `grepl("\\d", Transmission)` akan memberikan nilai `True` apabila nilai tersebut memiliki angka didalamnya. 
+
+Fungsi `ifelse()` digunakan untuk mengisi nilai 0 secara *default* apabila dari kolom Transmission tidak memiliki karakter angka. Singkatnya, fungsi `ifelse(grepl("\\d", Transmission), gsub("[^0-9]", "", Transmission), 0)` akan melakukan pengecekan apakah terdapat karakter angka pada kolom Transmission, apabila ada maka akan mengambil nilai angka saja, apabila tidak ada maka akan bernilai 0.
+
+Dari proses ini kita mendapatkan dua kolom baru yaitu: 
+
+- Transmission.Type: Jenis transmisi yang digunakan 
+- Gear: Banyak gear pada kendaraan tersebut. 
+
+
+### Data Types 
+
+Selanjutnya kita akan melakukan pengecekan terhadap struktur data kita. bisa menggunakan fungsi `str()` atau menggunakan `glimpse()`.
+
+
+```{r}
+glimpse(emission_clean)
+```
+
+Terdapat kolom yang memiliki tipe data yang belum sesuai yaitu kolom `Make`, `Model`, `Vehicle.Class`, `Transmission`, `Fuel.Type`. Kita akan merubah kolom tersebut menjadi tipe data faktor. 
+
+```{r}
+emission_clean <- emission_clean %>% 
+  mutate_if(.predicate = is.character, .funs = as.factor) 
+```
+
+Dari struktur data tersebut maka kita akan merubah seluruh kolom yang bertipe `character` menjadi `factor`. Kita bisa merubah menggunakan fungsi `mutate_if()` dari package `dplyr`. Dalam fungsi `mutate_if` kita memasukkan parameter `.predicate` adalah kondisi kolom yang akan kita lakukan perubahan sedangkan parameter `.funs` adalah fungsi yang akan kita gunakan untuk kolom - kolom tersebut. Dari kode diatas berarti kita akan merubah kolom - kolom yang bertipe karakter dan mengaplikasikan fungsi as.factor terhadap kolom tersebut. 
+
+Sehingga kolom yang bertipe karakter akan berubah menjadi tipe factor 
+
+```{r}
+glimpse(emission_clean)
+```
+
+
+# Exploratory Data Analysis 
+
+Kita akan melakukan explorasi pada data kita untuk melihat informasi yang bisa didapatkan dari data kita. 
+
+Pertama kita akan melihat bagaimana persebaran nilai emisi karbon pada seluruh kendaraan. 
+
+```{r}
+summary(emission_clean$CO2.Emissions.g.km.)
+```
+
+Dapat dilihat dari persebaran data, kita bisa mengetahui bahwa terdapat perbedaan yang cukup jauh dari nilai minimum dan maksimum emisi yang dihasilkan dari kendaraan bermotor. Rata - rata emisi karbon yang dihasilkan sebuah kendaraan bermotor adalah 251 dan data sebagian besar tersebar di range 200 - 300. 
+
+Untuk melihat persebaran kita juga bisa melihat menggunakan visualisasi histogram dari fungsi `hist()`
+
+```{r}
+hist(emission_clean$CO2.Emissions.g.km.)
+```
+
+sebagian besar kendaraan memiliki nilai emisi sekitar 200 - 300 gram per km. 
+
+Selanjutnya kita akan melihat bagaimana konsumsi bahan bakar pada kendaraan bermotor untuk jenis jalan yang berbeda. Pertama kita akan melihat berapa konsumsi bahan bakar apabila berkendala di jalanan kota. 
+
+```{r}
+hist(emission_clean$Fuel.Consumption.City..L.100.km.)
+```
+
+Dari histogram kita mengetahui bahwa persebaran konsumsi bahan bakar kendaraan bermotor pada jalanan kota sebagian besar berada pada nilai 10 - 15 Liter per 100 km. untuk lebih objektif kita akan melihat dengan menggunakan fungsi `summary()`
+
+```{r}
+summary(emission_clean$Fuel.Consumption.City..L.100.km.)
+```
+
+Dapat dilihat bahwa nilai konsumsi bahan bakar di jalanan kota memiliki rentang yang cukup besar dengan nilai min 4,2 dan nilai maksimum sebesar 30,6. Dengan median sebagai pusat data, maka konsumsi bahan bakar pada jalanan kota sebagian besar yaitu 12,10 Liter per 100 km. 
+
+Selanjutnya kita akan melihat bagaimana konsumsi bahan bakar kendaraan apabila pada jalanan tol (Highway).
+
+```{r}
+hist(emission_clean$Fuel.Consumption.Hwy..L.100.km.)
+```
+
+Konsumsi bahan bakar pada jalanan highway sebagian besar berada pada rentang 5 - 10. Lebih kecil apabila dibandingkan dengan nilai konsumsi bahan bakar pada jalanan kota. 
+
+```{r}
+summary(emission_clean$Fuel.Consumption.Hwy..L.100.km.)
+```
+
+Nilai minimum dan maksimum konsumsi bahan bakar pada jalanan highway lebih berada pada rentang 4 - 20,6. Dengan median sebagai pusat data, konsumsi bahan bakar kendaraan bermotor pada kondisi jalan tol sebagian besar berada pada nilai 8.7. Nilai ini merupakan nilai yang lebih kecil jika dibandingkan dengan median konsumsi bahan bakar untuk jalanan kota. 
+
+Selanjutnya kita akan melihat dari data kita, perusahaan produksi kendaraan bermotor apa yang paling banyak digunakan di Canada. 
+
+```{r}
+table(emission$Make)
+```
+
+Tabel diatas cukup sulit dibaca, kita akan mengurutkan nilai table kita menggunakan fungsi `sort()`. 
+
+```{r}
+sort(table(emission$Make), decreasing = TRUE)
+```
+
+Ternyata sebagian besar kendaraan yang digunakan di Canada merupakan produksi dari FORD dan CHEVROLET. Hal ini cukup masuk akal mengingat bahwa kedua perusahaan tersebut berpusat di America yang berada tepat di selatan Canada sehingga memungkinkan proses import kendaraan menjadi lebih mudah. 
+
+Selanjutnya kita akan melihat jenis transmisi apa yang sering digunakan oleh masyarakat Canada. 
+```{r}
+plot(emission_clean$Transmission.Type)
+```
+
+
+Dapat dilihat bahwa tipe transmisi AS (Automatic with Selected Shift) menjadi tipe transmisi yang paling banyak digunakan. Transmisi ini merupakan transmisi otomatis tetapi dilengkapi dengan mode manual, sehingga pengemudi bisa memilih gigi secara manual tanpa pedal kopling. Jenis transmisi ini banyak diminati kemungkinan karena kenyamanan yang ditawarkan dimana pengemudi dapat memilih gigi secara manual tetapi tanpa pedal kopling. 
+
+## Emission variable analysis 
+
+Selanjutnya, Kita akan melakukan analisis terhadap variabel emisi dan bagaimana nilai variabel - variabel lain terhadap emisi kita. 
+
+Berikut adalah hal - hal yang akan kita analisis pada explorasi data emisi: 
+
+1. Nilai emisi kendaraan berdasarkan konsumsi bahan bakar untuk setiap jenis jalanan.  
+2. Nilai emisi kendaraan pada setiap jenis bahan bakar. 
+3. Bagaimana jenis transmisi pada kendaraan mempengaruhi nilai emisi. 
+
+Pertama, Kita akan melihat bagaimana hubungan konsumsi bahan bakar kendaraan pada jalanan kota terhadap nilai emisi kendaraan. 
+
+```{r}
+library(ggplot2)
+ggplot(data= emission_clean, mapping = aes(x = Fuel.Consumption.City..L.100.km., y = CO2.Emissions.g.km.)) +
+  geom_point(color = "blue") + 
+  theme_light()
+```
+
+Dapat dilihat bahwa emisi co2 pada kendaraan bermotor meningkat seiring dengan meningkatnya konsumsi bahan bakar kendaraan bermotor pada jalanan kota. Hal ini cukup masuk akan karena nilai emisi dipengaruhi oleh konsumsi bahan bakar. Selanjutnya kita akan coba membandingkan nilai konsumsi ini dengan kondisi jalanan *Highway.* 
+
+```{r}
+ggplot(data = emission_clean)+
+  geom_point(aes(x = Fuel.Consumption.City..L.100.km., y = CO2.Emissions.g.km.), color = "steelblue") +
+  geom_point(aes(x = Fuel.Consumption.Hwy..L.100.km., y = CO2.Emissions.g.km.), color = "tomato") +
+  labs(
+    x = "Fuel.Consumption",
+    y = "CO2 Emission",
+    title = "Distribution of Emission based on Fuel Consumption",
+    subtitle = "Red for Highway, Blue for City"
+  ) 
+
+```
+
+Pada visualisasi diatas, warna biru merupakan konsumsi bahan bakar untuk kondisi jalan kota dan warna merah merupakan konsumsi bahan bakar untuk kondisi jalan *highway.* Dapat dilihat bahwa secara garis besar, kedua grafik menunjukkan informasi yang sama yaitu nilai emisi akan meningkat seiring dengan peningkatan konsumsi bahan bakar. Tetapi, Konsumsi bahan bakar kendaraan bermotor pada jalanan highway cenderung lebih rendah dibandingkan dengan konsumsi bahan bakar pada jalanan kota. 
+
+
+Selanjutnya kita akan melihat bagaimana rata-rata nilai emisi untuk setiap jenis bahan bakar. 
+
+```{r}
+# Agregasi data
+mean_emission_fuel <- aggregate(CO2.Emissions.g.km. ~ Fuel.Type, emission_clean, mean)
+
+# Rename kolom
+names(mean_emission_fuel) <- c("Fuel.Type", "mean_emission")
+
+#Urutkan data
+mean_emission_fuel <- mean_emission_fuel[order(mean_emission_fuel$mean_emission, decreasing = T),]
+
+mean_emission_fuel
+```
+
+Dapat dilihat bahwa secara rata - rata, nilai emisi karbon untuk setiap jenis bahan bakar tidak memiliki perbedaan yang signifikan. Untuk mempermudah pembacaan, kita akan coba membuat visualisasi dari data tersebut.
+
+
+```{r}
+
+# Create the bar plot
+ggplot(mean_emission_fuel, aes(x = mean_emission, y = reorder(Fuel.Type, mean_emission))) +
+  
+  geom_col(fill = "steelblue") +
+  geom_label(data = mean_emission_fuel, 
+             aes(label = round(mean_emission, 2)))+
+  labs(
+    y = "Fuel Type",
+    x = "Mean CO2 Emission",
+    title = "Average emission of each Fuel Type"
+  )
+```
+
+Dari visualisasi diatas kita bisa mengetahui bahwa nilai rata-rata emisi karbon untuk setiap bahan bakar tidak memiliki perbedaan yang besar dan berada pada rentang 213 - 277. Tetapi, kita akan mencoba bandingkan dengan melihat persebaran nilai emisi kendaraan berdasarkan setiap jenis bahan bakarnya.
+
+```{r}
+ggplot(data= emission_clean, mapping = aes(x = Fuel.Consumption.City..L.100.km., y = CO2.Emissions.g.km.)) +
+  
+  geom_point(aes(color = Fuel.Type))
+```
+
+Hal yang menarik kita dapatkan ketika menganalisis persebaran emisi untuk setiap jenis bahan bakar. Dapat dilihat bahwa sebagian besar kendaraan bermotor di kanada menggunakan jenis bahan bakar X (*regular gasoline*) yang memiliki nilai emisi yang cenderung tinggi jika dibandingkan dengan jenis yang lain. Kendaraan yang memiliki emisi rendah dengan konsumsi bahan bakar yang sama, menggunakan jenis bahan bakar E(*Ethanol*). Tetapi, jumlah kendaraan untuk setiap jenis bahan bakar tidak memiliki jumlah yang sama. Dapat dilihat bahwa secara emisi, kendaraan menggunakan bahan bakar D (*Diesel*) memiliki emisi yang tinggi tetapi jumlah kendaraannya sedikit. 
+
+Untuk itu kita akan coba melihat total emisi yang dihasilkan kendaraan untuk setiap jenis bahan bakar.
+
+```{r}
+# Agregasi data
+sum_emission_fuel <- aggregate(CO2.Emissions.g.km. ~ Fuel.Type, emission_clean, sum)
+
+# Count the number of rows for each group
+sum_emission_fuel$count <- tapply(emission_clean$CO2.Emissions.g.km., emission_clean$Fuel.Type, FUN = length)[sum_emission_fuel$Fuel.Type]
+
+# Rename kolom
+names(sum_emission_fuel) <- c("Fuel.Type", "Total Emission", "Vehicle count")
+
+# Urutkan data
+sum_emission_fuel <- sum_emission_fuel[order(sum_emission_fuel$`Total Emission`, decreasing = TRUE),]
+
+# Print the result
+sum_emission_fuel
+
+```
+
+Dari informasi diatas kita mengetahui bahwa di kanada kendaraan yang menggunakan jenis bahan bakar X (*regular gasoline*) sebanyak hampir 10x dibandingkan kendaraan yang menggunakan jenis bahan bakar E(Ethanol). Tetapi, nilai total emisi yang dihasilkan untuk bahan bakar X (regular gasoline) hanya 7x lebih tinggi dibandingkan total emisi yang dihasilkan untuk bahan bakar E(Ethanol). 
+
+Meskipun begitu untuk nilai konsumsi bahan bakar yang sama, nilai emisi kendaraan yang menggunakan bahan bakar ethanol cenderung lebih rendah. Hal ini dapat menjadi indikasi bahwa ethanol memiliki nilai oktan yang lebih tinggi dibandingkan regular gasoline dan kendaraan dengan bahan bakar ethanol memiliki sistem pembakaran yang lebih efektif sehingga emisi karbon lebih sedikit. 
+
+Hal ini dapat menjadi indikasi bahwa bahan bakar ethanol dapat menjadi alternatif bahan bakar yang dapat digunakan pada kendaraan bermotor. Bahan bakar ethanol bisa didapatkan dari tanaman seperti tebu, kentang, dan singkong. Hal ini juga dapat menjadi alternatif energi terbarukan yang dapat mengurangi tingkat emisi pada kendaraan bermotor.
+
+Selain jenis bahan bakar, jenis transmisi pada kendaraan dapat mempengaruhi nilai emisi karbon. Pengaruh perbedaan jenis transmisi ini tidak secara langsung mempengaruhi emisi karbon. Tetapi perbadaan jenis transmisi ini dapat mempengaruhi konsumsi bahan bakar yang kemudian dapat mempengaruhi tingkat emisi karbon. 
+
+Selanjutnya kita akan melihat bagaimana pengaruh jenis transmisi terhadap rata - rata nilai emisi.
+
+```{r}
+# Aggregasi data
+mean_emission_transmission <- aggregate(CO2.Emissions.g.km. ~ Transmission.Type, emission_clean, mean)
+
+# Count the number of rows for each group
+mean_emission_transmission$count <- tapply(emission_clean$CO2.Emissions.g.km., emission_clean$Transmission.Type, FUN = length)[mean_emission_transmission$Transmission.Type]
+
+# Order the data
+mean_emission_transmission <- mean_emission_transmission[order(mean_emission_transmission$CO2.Emissions.g.km., decreasing = TRUE),]
+
+# Rename the columns
+names(mean_emission_transmission) <- c("Transmission.Type", "mean_emission", "Vehicle count")
+
+mean_emission_transmission
+
+```
+
+```{r}
+ggplot(data = mean_emission_transmission, aes(x = mean_emission, y = reorder(Transmission.Type , mean_emission))) +
+  geom_col(fill = "steelblue")+
+  geom_label(aes(label = round(mean_emission,2)))+
+  labs(
+    x = "Average emission",
+    y = "Transmission type",
+    title = "Average emission for each transmission type"
+  )
+  
+```
+
+Dari Informasi diatas didapatkan bahwa Kendaraan dengan jenis transmisi Automatic memiliki rata-rata emisi karbon paling besar. Hal ini bisa dikarenakan kendaraan dengan tipe Automatic mengatur perpindahan gigi secara otomatis berdasarkan kecepatan kendaraan, beban mesin dan lain - lain. Sehingga pengguna tidak dapat mengoptimalkan perpindahan gigi untuk efisiensi bahan bakar. Tetapi, jenis transmisi ini menawarkan kenyamanan berkendara meskipun biasanya kurang efisien dalam konsumsi bahan bakar. 
+
+Berbeda dengan tipe transmisi M(Manual). Secara kuantitas kendaraan, tipe ini tidak memiliki perbedaan yang signifikan dengan tipe transmisi A(Automatic). Tetapi nilai emisinya lebih rendah. Hal ini bisa terjadi karena pengendara dapat melakukan optimasi terhadap gaya berkendara dan perpindahan gigi, sehingga konsumsi bahan bakar lebih rendah yang menyebabkan nilai emisi menjadi lebih rendah. 
+
+Selain jenis transmisi, Kita juga dapat melakukan analisis terhadap jumlah gear pada suatu  kendaraan. Sama seperti jenis transmisi, banyak gear tidak mempengaruhi secara langsung tingkat emisi pada kendaraan bermotor. Tetapi dapat mempengaruhi efisiensi penggunaan bahan bakar. 
+
+```{r}
+# Aggregasi data
+mean_emission_gear <- aggregate(CO2.Emissions.g.km. ~ Gear, emission_clean, mean)
+
+# Count the number of rows for each group
+mean_emission_gear$count <- tapply(emission_clean$CO2.Emissions.g.km., emission_clean$Gear, FUN = length)[mean_emission_gear$Gear]
+
+# Order the data
+mean_emission_gear <- mean_emission_gear[order(mean_emission_gear$CO2.Emissions.g.km., decreasing = TRUE),]
+
+# Rename the columns
+names(mean_emission_gear) <- c("Gear", "mean_emission", "Vehicle Count")
+
+mean_emission_gear
+```
+```{r}
+ggplot(data = mean_emission_gear, aes(x = mean_emission, y = reorder(Gear , mean_emission))) +
+  geom_col(fill = "steelblue")+
+  geom_label(aes(label = round(mean_emission,2)))+
+  labs(
+    x = "Average emission",
+    y = "Number of Gear",
+    title = "Average emission for each number of gear"
+  )
+```
+
+Dapat dilihat bahwa kita tidak dapat mengetahui hubungan langsung antara banyak gear dengan nilai emisi. Kita akan coba melihat hubungan antara banyak gear dengan konsumsi bahan bakar. 
+
+```{r}
+# Aggregasi data
+mean_consumption_gear <- aggregate(Fuel.Consumption.City..L.100.km. ~ Gear, emission_clean, mean)
+
+# Count the number of rows for each group
+mean_consumption_gear$count <- tapply(emission_clean$Fuel.Consumption.City..L.100.km., emission_clean$Gear, FUN = length)[mean_consumption_gear$Gear]
+
+# Order the data
+mean_consumption_gear <- mean_consumption_gear[order(mean_consumption_gear$Fuel.Consumption.City..L.100.km., decreasing = TRUE),]
+
+# Rename the columns
+names(mean_consumption_gear) <- c("Gear", "mean_consumption", "Vehicle Count")
+
+mean_consumption_gear
+```
+
+```{r}
+ggplot(data= emission_clean, mapping = aes(x = Fuel.Consumption.City..L.100.km., y = CO2.Emissions.g.km.)) +
+  
+  geom_point(aes(color = Gear))
+```
+
+Dari visualisasi tersebut, kita tidak dapat meganalisis bagaimana pengaruh banyak gear terhadap konsumsi bahan bakar dan emisi karbon. Sehingga ini dapat menjadi indikasi bahwa gear tidak mempengaruhi secara langsung terhadap emisi pada kendaraan. Hal ini dapat dipengaruhi oleh faktor yang tidak tersedia pada data kita, seperti kemampuan pengguna dalam mengoperasikan gear pada kendaraan dan lain sebagainya.
+
+Selanjutnya kita akan melihat bagaimana nilai emisi karbon kendaraan yang diproduksi oleh setiap perusahaan otomotif. 
+
+```{r}
+mean_emission_comp <- aggregate(CO2.Emissions.g.km. ~ Make, emission_clean, mean)
+
+# Order the data
+mean_emission_comp <- mean_emission_comp[order(mean_emission_comp$CO2.Emissions.g.km., decreasing = F),]
+
+names(mean_emission_comp) <- c("Company", "mean_emission")
+
+mean_emission_comp
+```
+```{r}
+ggplot(data = mean_emission_comp[1:10,], aes(x = mean_emission, y = reorder(Company , -mean_emission))) +
+  geom_col(fill = "steelblue")+
+  labs(
+    x = "Average emission",
+    y = NULL,
+    title = "10 Company produce the lowest emission car"
+  )
+```
+
+Kendaraan produksi SMART merupakan kendaraan dengan rata - rata emisi yang rendah, diikuti oleh HONDA, FIAT dan MAZDA. Dari 10 perusahaan tersebut, 5 perusahaan merupakan perusahaan Asia. Hal ini menunnjukkan bahwa industri otomotif di Asia menghasilkan kendaraan dengan nilai emisi yang rendah. 
+
+## Conclusion
+
+Dari eksplorasi data yang telah kita lakukan, terdapat beberapa informasi yang bisa kita simpulkan: 
+
+- Kendaraan dengan tipe transmisi AV(Continously Variable) atau sering dikenal sebagai CVT memiliki nilai emisi yang terendah. Tipe transmisi ini memungkinkan mesin untuk mengoptimalisasi pembakaran bahan bakar tetapi pengguna tetap dapat melakukan optimalisasi manual. Sehingga tipe ini selain memberikan emisi yang rendah juga memberikan pengalaman berkendara yang nyaman. Tetapi kendaraan bertipe ini masih belum diproduksi secara massive. 
+
+- Transmisi kendaraan manual memberikan pengguna kebebasan untuk mengatur perpindahan gigi, sehingga dapat digunakan untuk optimalisasi konsumsi bahan bakar. Hal ini dapat menyebabkan nilai emisi karbon yang berkurang untuk tipe transmisi tersebut. 
+
+- Bahan bakar etanol memiliki nilai rata - rata emisi yang tinggi. Tetapi, pada angka konsumsi bahan bakar yang sama bahan bakar etanol memiliki nilai emisi yang rendah dibandingkan dengan jenis bahan bakar lainnya. Hal ini dapat menjadi indikasi bahwa kendaraan yang menggunakan bahan bakar ethanol memiliki teknologi pembakaran yang efektif sehingga residu gas buang menjadi lebih sedikit yang menyebabkan nilai emisi karbonnya makin rendah. Hal ini dapat menjadi alternatif bagi para perusahaan otomotif untuk melihat potensi penggunaan ethanol sebagai bahan bakar alternatif dari energi terbarukan. 
+
+- Perusahaan Otomotif Asia seperti Honda, Mazda, Mitsubishi, Hyndai, KIA dapat memproduksi kendaraan dengan nilai emisi yang rendah. Hal ini menjadi indikasi bahwa negara di Asia memiliki potensi perkembangan industri otomotif yang tinggi. 
+
+## References 
+
+- [World Air Quality Report 2021](https://www.iqair.com/id/newsroom/WAQR_2021_PR)
+- [Polusi udara di Indonesia](https://www.cnbcindonesia.com/news/20230903164954-4-468635/bukan-pltu-ternyata-ini-penyebab-utama-polusi-di-jakarta)
+- [Analisis faktor emisi kendaraan bermotor](https://repository.its.ac.id/56496/1/03211650010012-Master_Thesis.pdf)
+- [Bahan bakar ethanol](https://id.wikipedia.org/wiki/Bahan_bakar_etanol)
+- [Nilai oktan pada bahan bakar](https://otoklix.com/blog/bilangan-oktan-bensin-jenis-premium/)
+
+
+
+
+
+

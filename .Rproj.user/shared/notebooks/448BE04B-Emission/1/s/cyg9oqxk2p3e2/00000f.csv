@@ -1,0 +1,3 @@
+"0","prediction <- data.frame(act = data$CO2)"
+"0","prediction$model_all <- predict(object = model_all, newdata = data_pred)"
+"0","head(prediction)"

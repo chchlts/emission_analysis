@@ -1,0 +1,1 @@
+"0","paged_table(emission_suv[emission_suv$Fuel.Consumption.City..L.100.km. > 21 & emission_suv$CO2.Emissions.g.km. > 400, ])"

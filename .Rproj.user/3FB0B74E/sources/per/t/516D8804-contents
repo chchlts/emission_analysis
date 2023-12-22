@@ -1,0 +1,781 @@
+---
+title: "Emission_Canada"
+author: "Rahmafatin Izza"
+date: '`r Sys.Date()`'
+output: 
+  html_document:
+    theme: flatly
+    higlight: zenburn
+    toc: yes
+    toc_float:
+      collapsed: no
+    number_sections: yes
+    df_print: paged
+---
+
+Set up environment 
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+# chunk options
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  comment = "#>"
+)
+
+# scientific notation
+options(scipen = 9999)
+```
+
+
+# Machine Learning
+MAchine learning adalah mesin dapat mempelajari pola data hingga melakukan estimasi/prediksi di masa depan.
+Secara garis besar machine learning dibagi menjadi dua :
+
+1.  **Supervised Learning** : Memiliki variabel target (Nilai yang ingin di prediksi)
+
+**Regression** : Variabel target berupa nilai **numerik**
+**Classification** : variabel targetnya nilai **kategorik**
+
+
+2. **Unsupervised Learning** : Tidak memiliki variabel target (Hanya mempelajari pola)
+- Clustering
+- Dimensionality Reduction
+
+## Contoh kasus regresi : 
+Dalam pemilihan variabel pada kasus regresi, biasanya dikaitkan dengan masalah bisnis yang akan di selesaikan : 
+
+1. Seorang pemilik usaha retail ingin membuat beberapa produk baru. Pengusaha tersebut ingin memprediksi berapa kira - kira harga pokok penjualan yang bisa dia tentukan untuk produk tersebut. 
+
+* Target : Harga penjualan produk
+* Prediktor : Harga bahan, biaya jasa, demand pasar, kualitas bahan produksi. 
+
+2. Seorang tim HR dari sebuah perusahaan ingin memprediksi berapa gaji yang bisa diberikan untuk seorang karyawan baru agar tidak ada ketimpangan antar gaji karyawan pada perusahaan tersebut. 
+
+* Target : Gaji
+* Prediktor : Lama pengalaman, tingkat pendidikan, Usia, Keterampilan khusus.
+
+
+# Linear Regression
+
+Linear regression adalah salah satu algoritma regresi dalam **Supervised Learning** yang mana variabel target(Y) bernilai **numerik**.
+
+📐 Formula model Linear Regression
+$$
+\hat{y}=\beta_0+\beta_1.x_1+...+\beta_n.x_n
+$$
+Keterangan : 
+* $y$         = Nilai variable target
+* $\beta_0$   = Intercept, nilai variable target saat seluruh prediktor = 0 (direpresentasikan sebagai titik potong dengan sumbu y)
+* $\beta_1 ... \beta_n$   = Nilai koefisien variable prediktor
+* $x_1 ... x_n$       = Nilai variabel prediktor
+
+### Study Case : Emission prediction 
+
+Di Indonesia memiliki tingkat polusi yang tinggi. Salah satu polusinya adalah polusi udara. Hal ini bisa dikarenakan emisi karbon. Secara global emisi karbon dihasilkan dari pembakaran bahan bakar fosil yaitu 36% dari industri energi (pembangkit listrik/kilang minyak, dll), 27% dari sektor transportasi, 21% dari sektor industri, 15% dari sektor rumah tangga & jasa, 1% dari sektor lain -lain. Sektor transportasi menjadi penyumbang emisi karbon terbanyak kedua setelah sektor industri energi. Secara umum, nilai Emisi pada kendaraan bermotor dapat dihitung berdasarkan **nilai konsumsi bahan bakar** dan **jenis bahan bakar**. Tetapi pada praktiknya konsumsi bahan bakar juga dipengaruhi oleh gaya berkendara pengguna. Apakah pengguna sering melakukan akselerasi atau pengereman mendadak. Secara umum faktor akselerasi dan pengereman mendadak juga dapat dilihat dari jenis jalanan yang dilewati. Apabila pada jalan tol(Highway), kecepatan cenderung konstan sehingga nilai konsumsi bahan bakar akan lebih rendah dan menyebabkan emisi karbon pada kendaraan tersebut juga rendah. 
+
+Dari informasi tersebut, kita akan melakukan analisis apakah emisi hanya disebabkan oleh konsumsi bahan bakar atau beberapa faktor yang lain ? 
+
+### Dataset Information 
+
+Dataset yang digunakan merupakan dataset https://www.kaggle.com/datasets/debajyotipodder/co2-emission-by-vehicles?select=CO2+Emissions_Canada.csv
+Dataset ini merupakan dataset yang sudah di transformasi dari dataset asli milik pemerintah Canada yaitu https://open.canada.ca/data/en/dataset/98f1a129-f628-4ce4-b24d-6f16bf24dd64#wb-auto-6. 
+
+Dataset ini menujukkan nilai emisi pada kendaraan bermotor di canada, khususnya kendaraan roda 4 keatas. 
+
+* Make : Perusahaan pembuat kendaraan 
+* Model : Model kendaraan bermotor 
+4WD/4X4 = Four-wheel drive
+AWD = All-wheel drive
+FFV = Flexible-fuel vehicle
+SWB = Short wheelbase
+LWB = Long wheelbase
+EWB = Extended wheelbase
+
+* Vehicle.Class : kelas kendaraan
+* Engine.Size.L : Ukuran mesin dalam Liter
+* Cylinders : Banyak silinder kendaraan 
+* Transmission : Jenis transmisi kendaraan 
+A = automatic
+AM = automated manual
+AS = automatic with select shift
+AV = continuously variable
+M = manual
+3 - 10 = Number of gears
+
+* Fuel.Type : Jenis bahan bakar yang digunakan 
+X = regular gasoline
+Z = premium gasoline
+D = diesel
+E = ethanol (E85)
+N = natural gas
+
+* Fuel.Consumption.City..L.100.km. : Konsumsi bahan bakar tiap 100km apabila berjalan di jalanan kota
+* Fuel.Consumption.Hwy..L.100.km. : Konsumsi bahan bakar tiap 100km apabila berjalan di jalanan tol(highway)
+* Fuel.Consumption.Comb..L.100.km. : Konsumsi bahan bakar tiap 100km yang di kombinasikan untuk jalanan kota dan highway ((55% city, 45% hwy))
+* Fuel.Consumption.Comb..mpg :  Komsumsi bahan bakar dalam satuan miles per gram
+* CO2.Emission.g.km. : Emisi karbon kendaraan dalam gram untuk setiap km. 
+
+Dari informasi data tersebut kita akan menentukan variabel taget dan melihat bagaimana hubungan tiap variabel terhadap variabel target : 
+* variabel target : CO2.Emission.g.km.
+
+Note : 
+Variabel Consumption.Comb tidak akan digunakan hal ini dikarenakan nilai tersebut merupakan hasil penjumlahan dari 2 variabel yang lain, sehingga untuk mencegah multikolinearitas.
+
+#### Data Preparation
+
+1. **Read data**
+
+```{r}
+library(rmarkdown)
+emission <-  read.csv('data/CO2 Emissions_Canada.csv')
+paged_table(head(emission))
+
+```
+
+2. **Periksa struktur data**
+```{r}
+str(emission)
+```
+
+```{r}
+summary(emission)
+```
+
+Terdapat data yang memiliki struktur yang kurang tepat, yaitu pada Make, Model, Vehicle class, Transmission, dan Fuel.type
+Ubah tipe tersebut menjadi factor. 
+
+```{r}
+emission
+```
+
+```{r}
+emission <- 
+emission %>% 
+  mutate_if(.predicate = is.character, .funs = as.factor) 
+```
+
+Data kita sudah memiliki tipe yang sesuai. Maka selanjutnya kita akan melihat apakah terdapat missing value pada data kita. 
+
+```{r}
+glimpse(emission)
+```
+
+3. **Missing Value**
+
+```{r}
+anyNA(emission)
+```
+Dari fungsi anyNA() diketahui bahwa pada data kita tidak terdapat missing value. Selanjutnya kita akan masuk ke tahap Exploratory Data Analysis untuk mengetahui informasi apa yang bisa kita dapat dari data kita. 
+
+#### Exploratory Data Analysis
+
+1. Distribusi data pda variabel target
+
+```{r}
+boxplot(emission$CO2.Emissions.g.km., horizontal = T)
+```
+
+Dari boxplot diatas didapatkan insight :
+- Terdapat outlier pada data emisi kita 
+- Nilai outlier tidak begitu ekstrim tetapi frekuensinya cukup banyak.
+
+```{r}
+paged_table(emission[emission$CO2.Emissions.g.km. > 400, ])
+
+```
+
+```{r}
+summary(emission)
+```
+
+
+```{r}
+emission_feature <- emission[, c("Make","Model","Vehicle.Class","Engine.Size.L.", "Cylinders","Transmission","Fuel.Type","Fuel.Consumption.City..L.100.km.", "Fuel.Consumption.Hwy..L.100.km.", "CO2.Emissions.g.km.")]
+```
+
+```{r}
+library(stringr)
+
+emission_feature <- 
+emission_feature %>% 
+  mutate(Transmission_type = str_sub(Transmission, start = 1, end = -2)) %>%
+  mutate(Transmission_type = str_replace(Transmission_type, "A1", "A")) %>% 
+  mutate(Transmission_type = str_replace(Transmission_type, "AS1", "AS")) %>% 
+  mutate(Transmission_type = str_replace(Transmission_type, "AV1", "AV")) %>% 
+  mutate(Transmission_type = as.factor(Transmission_type))
+```
+
+```{r}
+paged_table(emission_feature)
+```
+```{r}
+# "SUV - SMALL" 
+# "SUV - STANDARD"
+
+emission_suv <- emission_feature[emission_feature$Vehicle.Class == c("SUV - STANDARD", "SUV - SMALL"), ]
+```
+
+
+
+```{r}
+levels(emission_suv$Make)
+
+library(car)
+
+model_all <- lm(formula = CO2.Emissions.g.km. ~ . - Transmission - Model, data = emission_suv)
+vif(model_all) #vif tidak bisa kalau ada dummy variabel yang terlalu banyak
+
+
+model_suv <- lm(formula = CO2.Emissions.g.km. ~ . - Transmission - Model - Make - Vehicle.Class - Fuel.Type - Transmission_type, data = emission_suv )
+
+library(lmtest)
+
+shapiro.test(model_suv$residuals)
+bptest(model_suv)
+vif(model_suv)
+
+```
+
+
+
+
+```{r}
+library(ggplot2)
+
+ggplot(data = emission_suv , aes(x=Fuel.Type))+
+  geom_bar()
+
+```
+Dari informasi diatas dapat dilihat bahwa sebagian besar kendaraan memiliki tipe bahan bakar X (Regular Gasoline) dan Z(premium Gasoline). Tidak ada kendaraan yang menggunakan bahan bakar N(Natural gas). 
+
+Selanjutnya kita akan melihat apakah terdapat outlier pada konsumsi bahan bakar 
+```{r}
+boxplot(emission_suv$Fuel.Consumption.City..L.100.km., horizontal = T)
+```
+
+Dapat dilihat bahwa terdapat outlier pada data konsumsi bahan bakar, yaitu sekitar >21. 
+
+
+```{r}
+paged_table(emission_suv[emission_suv$Fuel.Consumption.City..L.100.km. > 21 & emission_suv$CO2.Emissions.g.km. > 400, ])
+
+```
+
+Hubungan linier variabel consumption.city dengan emission 
+
+```{r}
+emission_suv_no_outllier <- emission_suv[emission_suv$Fuel.Consumption.City..L.100.km. < 20, ]
+boxplot(emission_suv_no_outllier$Fuel.Consumption.City..L.100.km.)
+```
+
+
+```{r}
+plot(emission_suv_no_outllier$Fuel.Consumption.City..L.100.km. , emission_suv_no_outllier$CO2.Emissions.g.km.)
+```
+
+
+```{r}
+emission_suv_no_outllier[emission_suv_no_outllier$Fuel.Consumption.City..L.100.km. > 12 & emission_suv_no_outllier$CO2.Emissions.g.km. < 150,]
+
+emission_suv_no_outllier[emission_suv_no_outllier$Fuel.Type == "D",]
+```
+
+
+```{r}
+library(ggplot2)
+
+ggplot(data= emission_suv, mapping = aes(x = Fuel.Consumption.City..L.100.km., y = CO2.Emissions.g.km.)) +
+  
+  geom_point(aes(color = Fuel.Type))
+```
+
+Dapat dilihat bahwa kedua variabel memiliki hubungan yang linear. Hal ini sesuai dengan definisi emisi karbon pada kendaraan bermotor, yaitu apabila konsumsi bahan bakar meningkat maka emisi karbon juga meningkat. 
+
+
+Selanjutnya mari melihat korelasi kedua variabel yang akan digunakan
+```{r}
+cor(emission_feature$Fuel.Consumption.City..L.100.km., emission_feature$CO2.Emissions.g.km.)
+```
+Kedua variabel memiliki korelasi positif kuat. 
+
+
+
+
+
+## Modelling
+Untuk melakukan pemodelan linear regression menggunakan fungsi `lm()`
+
+* Tanpa prediktor: `formula = target ~ 1`
+* Satu prediktor: `formula = terget ~ prediktor`
+* Beberapa prediktor: `formula = target ~ prediktor1 + prediktor2 + prediktor3`
+* Semua prediktor: `formula = target ~ .`
+* Exclude prediktor: `formula = target ~ . - ex_prediktor1 - ex_prediktor2`
+
+### Simple Linear Regression
+Simple Linear Regression adalah model regresi yang memiliki satu prediktor saja. 
+
+📐 Formula Simple Linear Regression :
+$$ y = \beta_0 + \beta_1 x$$
+
+Untuk pemodelan pertama kita akan membuat model regresi sederhana dengan prediktor konsumsi bahan bakar pada jalanan kota. yang kita beri nama model_city. 
+
+```{r}
+model_city <- lm(formula = CO2.Emissions.g.km. ~ Fuel.Consumption.City..L.100.km. , data = emission_feature)
+summary(model_city)
+```
+
+
+### Interpretasi Model
+
+Informasi yang bisa didapatkan dari model tersebut : 
+
++ Call : Menunjukkan formula model regresi 
++ Residuals : Menunjukkan five number summary dari residual/eror (Selisih antara nilai prediksi dengan nilai aktual)
++ Coefficient : Nilai koefisien menunjukkan pengaruh variabel prediktor terhadap variabel target. 
+  - Intercept : Menunjukkan nilai variabel target apabilai keseluruhan nilai prediktor nya nol
+  - Estimate : Menunjukkan estimasi pengaruh variabel terhadap target. Apabila positif maka setiap penambahan satu satuan variabel prediktor. Maka akan meningkatkan nilai variabel target sebesar nilai estimasi tersebut. 
+  - Std. Eror : ....
+  - t-value : Merupakan hasil pembagian dari std.eror dengan t-value
+  - Pr : Menunjukkan p-value dan seberapa signifikan pengaruh variabel prediktor terhadap target
++ Signifikasi : 
+   + Uji hipotesis yang digunakan menggunakan alpha(0.05):
+    - H0: Prediktor tidak signifikan berpengaruh
+    - H1: Prediktor signifikan berpengaruh
+    
+  - Prediktor akan dikatakan signiifikan apabila p-value < alpha (Tolak H0)
+  - Gunakan Signif. codes apabila menggunakan alpha 0.05. tanda * menunjukkan prediktor tersebut makin signifikan pengaruhnya terhadap variabel target. 
++ Residual Standard eror : Menunjukkan standar deviasi dari nilai residual/eror (sering disebut standard eror)
++ R - Squared : Ukuran seberapa baik model menjelaskan keberagaman(variansi) target
+  - Semakin mendekati 1, maka semakin baik prediktor yang dipilih menjelaskan varansi target
+  - Multiple R-square : Untuk model dengan 1 prediktor.
+  - Adjusted R-square : Untuk model dengan > 1 prediktor.
+  - Tidak ada aturan baku untuk besaran nilai r-square, hal ini kembali ke urgensi bisnis. 
+
+Dari keterangan diatas didapatkan informasi bahwa : 
+  - Variabel yang dipilih menjelaskan variabel target secara signifikan. 
+  - Intercept : Apabila tidak ada konsumsi bahan bakar, kendaraan tersebut masih memiliki nilai emisi sebesar 57 gramCo2
+  - R Square : 
+    - Rsquare : 0.84 = 84%
+    - 84% variansi pada target dapat dijelaskan oleh variabel prediktor. 
+  
+
+```{r}
+plot(emission_feature$Fuel.Consumption.City..L.100.km. , emission_feature$CO2.Emissions.g.km.)
+abline(model_city, col="red")
+```
+
+
+Model linear regression yang kita lakukan memiliki nilai r-square yang relatif tinggi. Tetapi kita akan melakukan analisis menggunakan nilai variabel yang lain. 
+
+
+### Multiple Linear Regression
+
+Multiple linear regression merupakan regresi linear yang memiliki prediktor > 1. Sebagaimana perhitungan nilai emisi pada kendaraan, kita akan mencoba membuat model dengan keseluruhan prediktor. 
+
+Note : Kita tidak akan menggunakan variabel Model, Make, Vehicle.Class dan Transmission
+
+```{r}
+emission_feature <- emission_feature[,c("Engine.Size.L.", "Cylinders", "Fuel.Type", "Fuel.Consumption.City..L.100.km.", "Fuel.Consumption.Hwy..L.100.km.", "Transmission_type", "CO2.Emissions.g.km.")]
+```
+
+```{r}
+model_all <- lm(dat = emission_feature, formula = CO2.Emissions.g.km. ~ . )
+```
+
+Pada model_all kita tidak hanya menggunakan variabel numerik, tetapi juga variabel kategorik yaitu pada variabel Fuel.Type dan Transmission_type. Jika diamati pada model_all summary terdapat beberapa variabel baru. 
+Hal ini merupakan penggunaan dummy variabel untuk model regresi linear 
+
+#### Dummy Variable 
+Berikut ilustrasi Dummy variabel pada kolom fuel.type
+```{r}
+knitr::include_graphics("assets/dummy_var.png")
+```
+
++ Akan membentuk sebanyak n-1 variabel. 
++ Nilai pertama akan menjadi nilai basis/intercept. sehingga tidak ditampilkan
++ Representasi nilai untuk variabel fuel.type : 
+Dengan seluruh nilai variabel tetap, maka :
+  - Emisi kendaraan akan berkurang sebesar -142.77 saat menggunakan bahan bakar E. 
+  - Emisi kendaraan akan berkurang sebesar -30.20841 apabila menggunakan bahan bakar X
+
+### Interpretasi Model 
+```{r}
+summary(model_all)
+```
+
+💡 Interpretasi model : 
+- Nilai adj r-square : 0.9914 = 99% 
+- 99% variansi target variabel dapat dijelasikan oleh prediktor yang dipilih. 
+- Secara garis besar, keseluruhan prediktor signifikan terhadap target. 
+
+### R-Squared vs Adj.R-Squared (Goodness of fit)
+**R-squared** adalah ukuran seberapa baik model kita menjelaskan variansi target. 
+Karakteristik r-square : 
+  - Berada pada rentang 0 - 1
+  - Tidak ada aturan baku tentang besar r-square, Hal ini kembali ke urgensi bisnis. 
+
+Semakin banyak variabel prediktor yang digunakan, nilai Multiple R-squared meningkat. Terlepas dari apakah nilai variabel tersebut berpengaruh signifikan atau tidak. 
+
+**Adjusted R-Square** adalah Nilai r-squared yang disesuaikan dengan jumlah variabel prediktor yang digunakan (faktor penalisasi). Sehingga Adjusted R-Square hanya akan meningkat apabila prediktor yang digunakan memang menghasilkan eror yang lebih kecil. 
+
+Penggunaan informasi r-square : 
+**Multiple R-square** : digunakan saat prediktor = 1
+**Adjusted R-Square** : digunakan saat prediktor > 1
+
+Interpretasi R-square : 
+  - R-square : 0.87 = 87% 
+  - 87% variansi pada variabel target dapat dijelaskan oleh prediktor. 
+
+
+
+```{r}
+mean(model_all$fitted.values)
+mean(emission_feature$CO2.Emissions.g.km.)
+```
+
+
+### Feature Selection
+
+Hal yang harus diperhatikan dalam membuat model machine learning adalah pemilihan variabel target dan prediktor. Prediktor yang kurang tepat bisa jadi memberikan efek yang kurang baik terhadap model kita. 
+Cara pemilihan variabel prediktor :
+- Berdasarkan bisnis 
+- Berdasarkan statistik :
+  + Korelasi dengan variabel target
+  + Step-wise regression
+
+Pada sebelumnya kita telah membuat dua model yaitu `model_city` dan `model_all` selanjutnya kita akan membuat model dengan prediktor sesuai dengan feature selection
+
+**Correlation**
+Kita akan membuat model dengan variabel prediktor yang memiliki korelasi tinggi dengan variabel target
+
+```{r}
+#Cek Korelasi variabel
+
+library(GGally)
+ggcorr(emission_feature, label=T)
+```
+
+💡Insight : 
+Variabel yang memiliki nilai korelasi tinggi : 
+  - Engine.Size
+  - Cylinders
+  - Fuel.Consumption(hwy/city)
+
+```{r}
+model_co2_corr <- lm(data = emission_feature, formula = CO2.Emissions.g.km. ~ Engine.Size.L. + Cylinders + Fuel.Consumption.City..L.100.km. + Fuel.Consumption.Hwy..L.100.km.)
+```
+
+```{r}
+summary(model_co2_corr)
+```
+💡Insight : 
+- Nilai r-square(Adj.r.square) : 0.8791
+
+### Step Wise Regression 
+
+Step Wise regression adalah salah satu metode pembuatan model regresi yang mencari kombinasi variabel prediktor terbaik berdasarkan nilai AIC (Akaike Information Criterion)
+
+**AIC (Akaike Information Criterion)** menunjukkan banyaknya informasi yang hilang pada model (Information Loss)
+Model yang terbaik adalah yang memiliki nilai **AIC terkecil**
+
+Step Wise regression : 
+- Backward
+- Forward
+- Both
+
+#### Backward
+```{r, out.width = "100%", echo = FALSE, fig.align = "center"}
+knitr::include_graphics("assets/backward.png")
+```
+
+Tahapan Backward :
+1. Buat model dengan seluruh variabel prediktor 
+2. Masing - masing variabel **dicoba** untuk di hilangkan, Lalu Hitung AIC
+3. Hilangkan skema/percobaan yang memiliki AIC terkecil.
+4. Ulangi tahap 2 dan 3 hingga mendapat nilai AIC terkecil
+
+```{r}
+model_backward <-  step(model_all, direction = "backward")
+```
+
+#### Forward 
+```{r, out.width = "100%", echo = FALSE, fig.align = "center"}
+knitr::include_graphics("assets/forward.png")
+```
+Tahapan Forward : 
+1. Buat model tanpa prediktor 
+2. Masing - masing variabel **dicoba** untuk di tambahkan , Lalu Hitung AIC
+3. Hilangkan skema/percobaan yang memiliki AIC terkecil.
+4. Ulangi tahap 2 dan 3 hingga mendapat nilai AIC terkecil
+
+```{r}
+model_base <- lm(formula = CO2.Emissions.g.km. ~ 1, data=emission_feature)
+model_forward <- step(object = model_base, # model referensi
+                      direction = "forward",
+                      scope = list(upper = model_all, 
+                                   lower = model_base) # di case forward, lower ga wajib ditulis
+                      ) 
+```
+
+
+#### Both
+Kombinasi antara backeard dan forward : 
+
+1. Buat model dasar (boleh all, boleh none)
+2. Masing-masing variable dicoba untuk **ditambahkan atau dihilangkan**, lalu dihitung AIC-nya
+3. **Tambahkan atau hilangkan** 1 variable yang akan menghasilnya AIC terkecil
+4. Ulangi langkah 2 dan 3
+5. Proses berhenti apabila saat **penambahan atau pengurangan** variable malah menghasilkan AIC yang lebih tinggi
+
+```{r}
+model_both <- step(object = model_base,
+                   direction = "both",
+                   scope = list(upper = model_all)
+                   )
+```
+
+### Model Comparison 
+
+Kita sudah memiliki beberapa model yaitu `model_city`, `model_all`, `model_co2_corr`, `model_backward`, `model_forward`, `model_both`. Selanjutnya kita akan mencari model terbaik dengan membandingkan beberapa model yang sudah kita buat.  
+
+
+1. **R-Squared**
+```{r}
+summary(model_city)$r.square
+summary(model_all)$adj.r.square
+summary(model_co2_corr)$adj.r.square
+summary(model_backward)$adj.r.square
+summary(model_forward)$adj.r.square
+summary(model_both)$adj.r.square
+
+```
+💡Insight :
+- `model_all` memiliki r-square paling tinggi yaitu 0.991
+- `model_all` adalah model yang paling baik menjelaskan variansi variabel target. 
+- Hasil dari step wise regression merupakan model dengan seluruh variabel prediktor. 
+
+2. **Evaluation Metrics**
+
+### Model Evaluation
+Evaluasi terhadap model dilakukan untuk mengetahui apakah model tersebut sudah cukup baik dilihat dari bagaimana eror/residual prediksi. Model yang baik memiliki nilai eror yang rendah.  
+
+### Prediction
+
+Kita akan melihat performa model untuk memprediksi pada data training saja. Untuk melakukan prediksi dengan menggunakan fungsi `predict()`. 
+
+```{r}
+co2_pred <- data.frame(actual = emission_feature$CO2.Emissions.g.km.)
+co2_pred$model_city <- predict(model_city, emission_feature)
+co2_pred$model_all <- predict(model_all, emission_feature)
+co2_pred$model_co2_corr <- predict(model_co2_corr, emission_feature)
+co2_pred$model_backward <- predict(model_backward, emission_feature)
+co2_pred$model_forward <- predict(model_forward, emission_feature)
+co2_pred$model_both <- predict(model_both, emission_feature)
+
+head(co2_pred)
+```
+
+### Eror 
+Eror/residual pada regresi linear adalah selisih dari nilai prediksi dengan nilai aktualnya 
+
+$$eror/residual = prediksi - aktual = \hat y - y$$
+
+#### Mean Squared Eror 
+MSE menghitung rata-rata dari kuadrat eror. 
+
+📐 Formula 
+$$MSE = \frac{1}{n} \sum (\hat y - y)^2$$
+
+
+📌 Fungsi di r : `MSE()`
+```{r}
+library(MLmetrics)
+MSE(y_pred = co2_pred$model_city, 
+    y_true = co2_pred$actual)
+
+MSE(y_pred = co2_pred$model_all, 
+    y_true = co2_pred$actual)
+
+MSE(y_pred = co2_pred$model_co2_corr, 
+    y_true = co2_pred$actual)
+
+```
+
+Karakteristik : 
+- Nilai MSE tidak dapat langsung di interpretasikan karena satuannya kuadrat 
+- Nilai MSE digunakan untuk dibandingkan dengan model lain.
+
+#### Root Mean Squared Error 
+RMSE merupakan bentuk akar dari nilai MSE. Nilai ini dapat di interpretasikan karena satuannya sama. 
+
+$$ RMSE = \sqrt{\frac{1}{n} \sum (\hat y - y)^2} $$
+
+```{r}
+library(MLmetrics)
+RMSE(y_pred = co2_pred$model_city, 
+    y_true = co2_pred$actual)
+
+RMSE(y_pred = co2_pred$model_all, 
+    y_true = co2_pred$actual)
+
+RMSE(y_pred = co2_pred$model_co2_corr, 
+    y_true = co2_pred$actual)
+
+```
+Dari keseluruhan model yang memiliki nilai RMSE paling kecil adalah model_all
+
+
+```{r}
+library(performance)
+data.frame(compare_performance(model_city, model_all, model_co2_corr, model_backward, model_forward, model_both))
+```
+
+
+Dari nilai evaluasi didapatkan bahwa model terbaik dengan nilai r-squared terbesar dan RMSE terkecil adalah model_all. 
+
+```{r}
+summary(model_all)
+```
+
+Karena linear Regression merupakan model statistik, maka model tersebut memiliki beberapa asumsi yang perlu dipenuhi agar model menjadi model Best Linear Unbiased Estimate (BLUE). 
+
+## Asumsi Linear Regression 
+Asumsi model linear regression:
+
+1. **Linearity**
+2. **Normality** of Residuals
+3. **Homoscedasticity** of Residuals
+4. **No Multicollinearity**
+
+
+### Linearity 
+Asumsi linearity merupakan variabel target dan prediktornya memiliki **hubungan yang linear**. 
+
+Pada multiple linear regression, asumsi linearity dapat dilihat dengan melakukan visualisasi residual vs fitted.value(prediksi)
+
+```{r}
+plot(model_all, which = 1)
+```
+Kondisi yang diharapkan : 
+- Nilai residual **bounce randomly (Menyebar konstan)** di sekitar 0. 
+
+**📌 Tambahan**: Apabila ada prediktor yang tidak memenuhi asumsi linearity (dari nilai korelasinya):
+
+1. Tidak perlu dilibatkan di model linear regression
+2. Gunakan model lain yang lebih kompleks, sehingga bisa menangkap hubungan non-linear
+
+* Jika data naik turun seperti rumput, dan tidak ada rentang, maka itu bukan hubungan linier. Hal ini dikarenakan hubungan yang linier sendiri artinya perubahan variabel dependen berbanding lurus dengan perubahan variabel independen. Dengan kata lain, harus ada kecenderungan yang jelas dalam data, di mana nilai variabel dependen meningkat atau menurun seiring dengan peningkatan atau penurunan nilai variabel independen.
+
+
+### Normality of residuals.
+Nilai residual.**eror memiliki distribusi normal**. 
+
+1. Menggunakan visualisasi `hist()`
+```{r}
+hist(model_all$residuals)
+```
+
+2. Uji Statistik shapiro.test()
+
+Shapiro-Wilk hypothesis test:
+
+* H0: error berdistribusi normal
+* H1: error TIDAK berdistribusi normal
+
+```{r}
+# shapiro.test(model_all$residuals)
+```
+
+**📌 Tambahan**: Apabila model tidak memenuhi asumsi normality of residual:
+
+1. Handle outlier dengan cara dibuang
+2. Lakukan transformasi data pada **variable target** sebelum digunakan di pemodelan, misal dengan fungsi `log()` atau `sqrt()`
+3. Gunakan model lain yang lebih kompleks (model yang bebas asumsi)
+
+### Homoscedasticity 
+
+Diharapkan error yang dihasilkan oleh model menyebar secara acak atau dengan variasi konstan. Apabila divisualisasikan maka **error tidak berpola** . Kondisi ini disebut juga sebagai **homoscedasticity**
+
+```{r}
+plot(y = model_all$residuals, x=model_all$fitted.values)
+```
+
+💡 Dapat dilihat bahwa terdapat satu pola pad grafik residual. Untuk memastikan kita bisa melakukan uji statistik. 
+
+2. Uji Statistik dengan `bptest()` dari package `lmtest`
+
+Breuch-Pagan hypothesis test : 
+* H0: error menyebar konstan atau homoscedasticity
+* H1: error menyebar TIDAK konstan atau heteroscedasticity
+
+```{r}
+library(lmtest)
+bptest(model_all)
+```
+💡Nilai p-value sebesar 0.000002 
+
+Dengan menggunakan alpha 0.05 
+> p-value < alpha artinya Tolak H0. -> eror menyebar tidak konstan(Heteroscedasticity)
+
+**📌 Tambahan**: Apabila model tidak memenuhi asumsi homoscedasticity of residual:
+
+1. Lakukan transformasi data pada variable target ataupun predictor sebelum digunakan di pemodelan
+2. Gunakan model lain yang lebih kompleks (model yang bebas asumsi)
+
+### No Multicolinearity
+Multicolinearity adalah kondisi dimana terdapat **korelasi kuat antar variabel prediktor**.Hal ini tidak diinginkan karena menandakan prediktor redundan pada model, yang seharusnya dapat dipilih salah satu saja dari variable yang hubungannya amat kuat tersebut. 
+
+Uji VIF (Variance Inflation Factor) dengan fungsi `vif()` dari package `car`:
+* nilai VIF > 10: terjadi multicollinearity pada model
+* nilai VIF < 10: tidak terjadi multicollinearity pada model
+
+```{r}
+library(car)
+vif(model_all)
+```
+💡 Dari data kita terdapat variabel yang memiliki nilai VIF > 10 yaitu `Fuel.Consumption.Hwy..L.100.km.` dan `Fuel.Consumption.City..L.100.km.` Maka model_all tidak memenuhi asumsi multikolinearity. 
+
+Alternatif cara handle:
+
+* pilih salah satu antara `police_exp60` atau `police_exp59`
+* tidak menggunakan kedua variabel tersebut dalam model
+* kita buat prediktor baru yang merupakan rata-rata dari kedua prediktor tersebut (feature engineering)
+
+**📌 Tambahan**: Apabila model tidak memenuhi asumsi no multicollinearity:
+
+1. Membuat model kembali **menggunakan salah satu prediktor** yang terindikasi multiko 
+2. **Tidak menggunakan prediktor-prediktor** tersebut
+3. **Melakukan feature engineering** dengan membuat variabel baru yang berisi rata-rata dari kedua variabel yang terindikasi multiko
+4. Gunakan model lain yang lebih kompleks (model yang bebas asumsi)
+
+
+### Additional r-squared formula
+Nilai r-squared bisa di simplifikasi yaitu nilai variance hasil prediksi / variance variabel target.
+
+```{r}
+
+
+
+sum((predict(model_all) - mean(emission_feature$CO2.Emissions.g.km.))**2)/
+sum((emission_feature$CO2.Emissions.g.km. - mean(emission_feature$CO2.Emissions.g.km.))**2)
+
+var(predict(model_all))
+var(emission_feature$CO2.Emissions.g.km.)
+
+var(predict(model_all))/
+var(emission_feature$CO2.Emissions.g.km.)
+```
+
+Additional Resources 
+https://www.bradthiessen.com/html5/docs/ols.pdf
+https://online.stat.psu.edu/stat462/node/81/
+https://towardsdatascience.com/linear-regression-assumptions-why-is-it-important-af28438a44a1
+
+
+
+
+

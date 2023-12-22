@@ -1,0 +1,4 @@
+"0","shapiro.test(model_all$residuals)"
+"2","Error in shapiro.test(model_all$residuals) : 
+  sample size must be between 3 and 5000
+"

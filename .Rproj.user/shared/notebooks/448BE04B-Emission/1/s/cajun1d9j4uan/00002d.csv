@@ -1,0 +1,1 @@
+"0","abline(model_one_pred$coefficients[1], model_one_pred$coefficients[2], col='red')"
